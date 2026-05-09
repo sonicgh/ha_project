@@ -138,15 +138,15 @@ Custom application logs	                        7 days	   ESP32 via serial + rem
 
 ```
 Week	Days	Task	                                                                                                Deliverable
-1	   1-2	Set up Raspberry Pi: install HA OS, configure basic network, access from PC	                        HA login page accessible
-1	   3-4	Install Mosquitto MQTT broker (HA add-on), configure user/password, test with MQTT Explorer from PC	MQTT working
-1	   5-7	ESP32 code: connect to WiFi, MQTT, read switch, control LED	                                          LED toggles from HA
-2	   1-2	Add DS18B20 sensor → publish temp to MQTT	                                                            Temp visible in HA
-2	   3-4	Add servo control via MQTT	                                                                           Slider in UI moves servo
-2	   5-7	Integrate Open-Meteo weather automation + comparison logic	                                          Suggestion text appears in HA
-3	   1-2	Configure logging (enable recorder, optionally InfluxDB)	                                             Charts with 30-day history
-3	   3-4	(Optional) Install Ollama on RPi, connect HA OpenAI integration (custom endpoint)	                  LLM rephrases suggestions
-3	   5-7	Final dashboard design, testing, documentation	                                                      Complete working system + PC monitoring guide
+1	    1-2	  Set up Raspberry Pi: install HA OS, configure basic network, access from PC	                          HA login page accessible
+1	    3-4	  Install Mosquitto MQTT broker (HA add-on), configure user/password, test with MQTT Explorer from PC	  MQTT working
+1	    5-7	  ESP32 code: connect to WiFi, MQTT, read switch, control LED	                                          LED toggles from HA
+2	    1-2	  Add DS18B20 sensor → publish temp to MQTT	                                                            Temp visible in HA
+2	    3-4	  Add servo control via MQTT	                                                                          Slider in UI moves servo
+2	    5-7	  Integrate Open-Meteo weather automation + comparison logic	                                          Suggestion text appears in HA
+3	    1-2	  Configure logging (enable recorder, optionally InfluxDB)	                                            Charts with 30-day history
+3	    3-4	  (Optional) Install Ollama on RPi, connect HA OpenAI integration (custom endpoint)	                    LLM rephrases suggestions
+3	    5-7	  Final dashboard design, testing, documentation	                                                      Complete working system + PC monitoring guide
 ```
 
 
