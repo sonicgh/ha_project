@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ha-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: homeassistant
+      POSTGRES_PASSWORD: hass_password
+      POSTGRES_DB: homeassistant
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: ha-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    # Create minimal config on first run
+    command: >
+      sh -c "
+      mkdir -p /mosquitto/config &&
+      echo 'listener 1883 0.0.0.0' > /mosquitto/config/mosquitto.conf &&
+      echo 'allow_anonymous true' >> /mosquitto/config/mosquitto.conf &&
+      echo 'persistence true' >> /mosquitto/config/mosquitto.conf &&
+      echo 'persistence_location /mosquitto/data/' >> /mosquitto/config/mosquitto.conf &&
+      mosquitto -c /mosquitto/config/mosquitto.conf
+      "
+
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - mosquitto
+    volumes:
+      - ./homeassistant_config:/config
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "8123:8123"
+    environment:
+      - TZ=Europe/London
+    privileged: true
+
+volumes:
+  postgres_data:
+  mosquitto_data:
+  mosquitto_log:
