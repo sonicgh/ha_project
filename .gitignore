@@ -216,3 +216,24 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Docker volumes (large, don't commit)
+postgres_data/
+mosquitto_data/
+mosquitto_log/
+
+# Home Assistant sensitive configs
+homeassistant_config/secrets.yaml
+homeassistant_config/.storage/
+homeassistant_config/*.db
+homeassistant_config/*.db-wal
+homeassistant_config/*.db-shm
+homeassistant_config/home-assistant.log*
+homeassistant_config/tts/
+homeassistant_config/deps/
+homeassistant_config/.cloud/
+homeassistant_config/oauth2-cache.json
+
+# Home Assistant large files
+homeassistant_config/media/
+homeassistant_config/backups/
