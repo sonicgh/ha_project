@@ -38,8 +38,19 @@ chmod +x backup_ha.sh restart_ha.sh monitor_ha_logs.sh
 0 * * * * /path/to/monitor_ha_logs.sh check 100 >> /var/log/ha_monitor.log 2>&1
 ```
 
-## Runining project
+## Runining/stop project: docker compose
 
 ```
 docker-compose up -d
 ```
+
+```
+docker-compose down
+```
+
+After running docker-compose up -d, the Home Assistant UI will be accessible at:
+http://localhost:8123
+
+egarding the database, it can be accessed by tools like DBeaver, pgAdmin, or via command line:
+psql -h localhost -U homeassistant -d homeassistant
+Password: hass_password
