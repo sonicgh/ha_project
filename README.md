@@ -38,7 +38,15 @@ chmod +x backup_ha.sh restart_ha.sh monitor_ha_logs.sh
 0 * * * * /path/to/monitor_ha_logs.sh check 100 >> /var/log/ha_monitor.log 2>&1
 ```
 
-## Runining/stop project: docker compose
+## Data Locations
+
+| Script | Data Location |
+|--------|---------------|
+| Backup (`ha_configuration_backup.sh`) | `./backups/` - config tar.gz + DB dump |
+| Restart (`service_restart.sh`) | No local files - operates on container |
+| Log monitoring (`container_log_monitoring.sh`) | No local files - reads container logs |
+
+## Runing/stop project: docker compose
 
 ```
 docker-compose up -d
