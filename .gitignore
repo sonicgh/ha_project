@@ -228,6 +228,9 @@ homeassistant_config/
 # Backups
 backups/
 
+# Logs
+logs/
+
 # Home Assistant sensitive configs
 # homeassistant_config/secrets.yaml
 # homeassistant_config/.storage/

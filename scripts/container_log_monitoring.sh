@@ -3,7 +3,7 @@
 
 # Configuration
 CONTAINER_NAME="homeassistant"
-LOG_FILE="/var/log/ha_monitor.log"  # Change as needed
+LOG_FILE="./logs/ha_monitor.log"
 ERROR_PATTERNS=("ERROR" "FATAL" "WARNING" "Exception" "Failed" "Unable")
 ALERT_EMAIL="your-email@example.com"  # Optional: set for email alerts
 
@@ -13,6 +13,10 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
+
+# Create log directory if it doesn't exist
+LOG_DIR=$(dirname "$LOG_FILE")
+mkdir -p "$LOG_DIR"
 
 # Function to send alert
 send_alert() {
