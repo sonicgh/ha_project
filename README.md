@@ -59,6 +59,28 @@ docker-compose down
 After running docker-compose up -d, the Home Assistant UI will be accessible at:
 http://localhost:8123
 
-egarding the database, it can be accessed by tools like DBeaver, pgAdmin, or via command line:
+## PostgreSQL Recorder
+
+Home Assistant stores entity state history in PostgreSQL (not SQLite).
+
+### How It Works
+
+Running `docker-compose up -d` automatically:
+- Installs psycopg2-binary driver
+- Connects to PostgreSQL (`ha-postgres:5432`)
+- Creates database tables
+- Stores state history
+
+No manual setup required. Configuration is in `homeassistant_config/configuration.yaml`.
+
+### Query state history
+
+```bash
+psql -h localhost -U homeassistant -d homeassistant -c "SELECT * FROM states LIMIT 10;"
+```
+
+### Database access
+
+Access via tools like DBeaver, pgAdmin, or command line:
 psql -h localhost -U homeassistant -d homeassistant
 Password: hass_password

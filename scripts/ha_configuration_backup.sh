@@ -33,9 +33,11 @@ if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓ Config backup completed: ${BACKUP_NAME}.tar.gz${NC}"
 
     # Backup PostgreSQL database
+    DB_BACKUP=false
     echo "Backing up PostgreSQL database..."
     if pg_dump -h localhost -U homeassistant -d homeassistant -Fc -f "${BACKUP_DIR}/${BACKUP_NAME}.dump" 2>/dev/null; then
         echo -e "${GREEN}✓ Database backup completed: ${BACKUP_NAME}.dump${NC}"
+        DB_BACKUP=true
     else
         echo -e "${YELLOW}⚠ Database backup skipped (pg_dump not available or connection failed)${NC}"
     fi
@@ -43,7 +45,9 @@ if [ $? -eq 0 ]; then
     # Create backup info file
     echo "Backup created: $TIMESTAMP" > "${BACKUP_DIR}/${BACKUP_NAME}.info"
     echo "Config size: $(du -sh $HA_CONFIG_DIR | cut -f1)" >> "${BACKUP_DIR}/${BACKUP_NAME}.info"
-    echo "DB backup: ${BACKUP_NAME}.dump" >> "${BACKUP_DIR}/${BACKUP_NAME}.info"
+    if [ "$DB_BACKUP" = true ]; then
+        echo "DB backup: ${BACKUP_NAME}.dump" >> "${BACKUP_DIR}/${BACKUP_NAME}.info"
+    fi
     
     # Remove old backups
     echo "Cleaning backups older than $RETENTION_DAYS days..."

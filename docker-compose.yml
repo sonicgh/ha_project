@@ -43,12 +43,14 @@ services:
       - mosquitto
     volumes:
       - ./homeassistant_config:/config
+      - ./homeassistant_config/entrypoint.sh:/entrypoint.sh
       - /etc/localtime:/etc/localtime:ro
     ports:
       - "8123:8123"
     environment:
       - TZ=Europe/London
     privileged: true
+    entrypoint: /bin/sh /entrypoint.sh
 
 volumes:
   postgres_data:
