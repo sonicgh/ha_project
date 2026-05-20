@@ -1,0 +1,21 @@
+# Home Assistant Configuration
+
+# Recorder - PostgreSQL database
+recorder:
+  db_url: postgresql://homeassistant:hass_password@ha-postgres:5432/homeassistant
+  purge_keep_days: 30
+  include:
+    domains:
+      - light
+      - switch
+      - sensor
+      - binary_sensor
+  exclude:
+    entities:
+      - sun.sun
+      - zone.home
+
+# Enable the history and logbook integration
+history:
+
+logbook:

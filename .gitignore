@@ -222,8 +222,25 @@ postgres_data/
 mosquitto_data/
 mosquitto_log/
 
-# Home Assistant
-homeassistant_config/
+# Home Assistant config - track key files
+!homeassistant_config/configuration.yaml
+!homeassistant_config/entrypoint.sh
+!homeassistant_config/blueprints/
+!homeassistant_config/.storage/
+
+# Ignore auto-generated/runtime files inside .storage
+homeassistant_config/.storage/auth
+homeassistant_config/.storage/core.restore_state
+homeassistant_config/.storage/http
+homeassistant_config/.storage/repairs.*
+
+# Ignore other generated files
+homeassistant_config/.HA_VERSION
+homeassistant_config/.ha_run.lock
+homeassistant_config/home-assistant.log*
+homeassistant_config/*.db
+homeassistant_config/*.db-wal
+homeassistant_config/*.db-shm
 
 # Backups
 backups/
