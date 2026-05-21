@@ -59,6 +59,12 @@ docker-compose down
 After running docker-compose up -d, the Home Assistant UI will be accessible at:
 http://localhost:8123
 
+Docker maps the internal ports of the containers to your computer's localhost (127.0.0.1). Here is what "available" looks like for each service:
+
+1. **Home Assistant (Port 8123)**: You can open a web browser and go to http://localhost:8123 to see the Home Assistant dashboard and configure your smart home.
+2. **PostgreSQL (Port 5432)**: You can use a database tool (like DBeaver or the psql command) to connect to localhost:5432 and view the data Home Assistant is storing.
+3. **Mosquitto (Port 1883)**: You can use an MQTT client (like MQTT Explorer) to connect to localhost:1883 and see messages being sent by your ESP32 devices or Home Assistant.
+
 ## PostgreSQL Recorder
 
 Home Assistant stores entity state history in PostgreSQL (not SQLite).
