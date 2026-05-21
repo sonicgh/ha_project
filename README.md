@@ -113,3 +113,27 @@ Generate a **Long-Lived Access Token** in your Home Assistant profile (`http://l
 ### API Endpoints
 - **REST API**: `http://localhost:8123/api/` (States, Services, History)
 - **WebSocket**: `ws://localhost:8123/api/websocket` (Real-time state updates)
+
+## Adding Devices
+
+Here is the flow to make a device visible in the dashboard:
+
+### 1. Physical Connection
+Connect your device (e.g., an LED, relay, or sensor) to the ESP32's GPIO pins.
+
+### 2. ESP32 Firmware (MQTT)
+The ESP32 needs code to control the device and talk to Home Assistant via the Mosquitto broker. You can use ESPHome, Tasmota, or Arduino code.
+- **Example (Arduino/MQTT)**: The ESP32 subscribes to a topic like `home/light/bedroom/set` and publishes its state to `home/light/bedroom/state`.
+
+### 3. Entity Creation in Home Assistant
+Home Assistant needs to know the device exists. This happens in two ways:
+- **MQTT Discovery (Recommended)**: If your ESP32 sends a specific "discovery message" to the `homeassistant/` topic, HA will automatically create the entity (e.g., `light.bedroom_lamp`).
+- **Manual Configuration**: You can manually define the device in `configuration.yaml` under the `mqtt:` section.
+
+### 4. Add to Dashboard
+Once the entity exists in Home Assistant (you can verify this by checking the **Developer Tools > States** page in the HA UI):
+1. Copy the **Entity ID** (e.g., `light.bedroom_lamp`).
+2. Open your Alpine.js dashboard.
+3. Enter that ID in the **"Add Device"** input field and click **Add**.
+
+**Summary**: The dashboard is just a remote control for entities that already exist inside Home Assistant. If the ESP32 hasn't reported the device to HA yet, the dashboard won't see it.
