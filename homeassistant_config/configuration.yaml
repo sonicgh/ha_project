@@ -1,5 +1,10 @@
 # Home Assistant Configuration
 
+# HTTP - API and CORS settings
+http:
+  cors_allowed_origins:
+    - http://localhost:3000  # Replace with your Alpine.js/HTMX frontend URL
+
 # Recorder - PostgreSQL database
 recorder:
   db_url: postgresql://homeassistant:hass_password@ha-postgres:5432/homeassistant

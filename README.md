@@ -90,3 +90,26 @@ psql -h localhost -U homeassistant -d homeassistant -c "SELECT * FROM states LIM
 Access via tools like DBeaver, pgAdmin, or command line:
 psql -h localhost -U homeassistant -d homeassistant
 Password: hass_password
+
+## API & Frontend Integration
+
+Home Assistant serves as a complete backend (REST API + WebSocket) that can be used directly by a custom frontend (e.g., Alpine.js + HTMX) without any middleware.
+
+### Frontend Port & CORS Configuration
+By default, the project is configured to allow frontend connections from **Port 3000**.
+- Your frontend should run on: `http://localhost:3000`
+- This is configured in `homeassistant_config/configuration.yaml` under `http: cors_allowed_origins:`
+
+If you run your frontend on a different port, update the `cors_allowed_origins` list in `configuration.yaml` and restart the container:
+```bash
+docker-compose restart homeassistant
+```
+
+### Authentication
+Generate a **Long-Lived Access Token** in your Home Assistant profile (`http://localhost:8123/profile`) to authenticate your frontend requests.
+- **REST API**: Include in headers: `Authorization: Bearer <YOUR_TOKEN>`
+- **WebSocket**: Send auth message immediately after connection: `{"type": "auth", "access_token": "<YOUR_TOKEN>"}`
+
+### API Endpoints
+- **REST API**: `http://localhost:8123/api/` (States, Services, History)
+- **WebSocket**: `ws://localhost:8123/api/websocket` (Real-time state updates)
