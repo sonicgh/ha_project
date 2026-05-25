@@ -137,3 +137,64 @@ Once the entity exists in Home Assistant (you can verify this by checking the **
 3. Enter that ID in the **"Add Device"** input field and click **Add**.
 
 **Summary**: The dashboard is just a remote control for entities that already exist inside Home Assistant. If the ESP32 hasn't reported the device to HA yet, the dashboard won't see it.
+
+## ESP32 MQTT Integration with Home Assistant
+
+This project uses MQTT as the communication bridge between the ESP32 module and Home Assistant running in Docker containers. Here's how the communication works:
+
+### Communication Path
+```
+Frontend UI (index.html) 
+    ↓ HTTP/WebSocket (to Home Assistant API)
+Home Assistant (Docker container) 
+    ↓ MQTT (to Mosquitto broker)
+Mosquitto MQTT Broker (Docker container) 
+    ↓ MQTT 
+ESP32 Module (on your network)
+```
+
+### Step-by-Step Process
+
+**1. ESP32 Setup:**
+- ESP32 connects to your WiFi (`house_network`)
+- ESP32 connects to MQTT broker at `192.168.1.100:1883` (your Docker host running Mosquitto)
+- ESP32 publishes Home Assistant MQTT discovery messages
+- ESP32 subscribes to command topics (e.g., `homeassistant/light/{device_id}/led1/command`)
+
+**2. Home Assistant Discovery:**
+- Home Assistant (in Docker container) connects to the same Mosquitto broker
+- Receives ESP32's discovery messages
+- Automatically creates entities: 3 light entities (LEDs) + 1 cover entity (servo)
+- No manual configuration needed in Home Assistant UI
+
+**3. Frontend UI Interaction:**
+- Your frontend UI (index.html) connects to Home Assistant's API at `http://localhost:8123`
+- You authenticate with your Home Assistant Long-Lived Access Token
+- UI displays discovered entities from Home Assistant
+- When you interact with UI (toggle LED, move servo):
+  - UI sends command to Home Assistant API (e.g., turn on light.entity)
+  - Home Assistant processes the command
+  - Home Assistant publishes corresponding MQTT command to Mosquitto broker
+  - Mosquitto forwards MQTT message to ESP32
+  - ESP32 receives command and executes action (turns LED on/off, moves servo)
+
+**4. Status Updates:**
+- ESP32 publishes state changes to MQTT (e.g., `homeassistant/light/{device_id}/led1/state: "ON"`)
+- Home Assistant receives state updates via MQTT
+- Home Assistant updates entity states
+- Frontend UI receives updates via Home Assistant API/WebSocket and refreshes display
+
+### Key Points:
+- **No direct communication** between frontend UI and ESP32 - all traffic flows through Home Assistant
+- **MQTT is the bridge** between ESP32 and Home Assistant (both connect to same Mosquitto broker)
+- **Home Assistant API** is what your frontend UI interacts with for display and control
+- **Automatic discovery** means you don't need to manually configure entities in Home Assistant
+- **Real-time updates** work through Home Assistant's WebSocket connection to the frontend UI
+
+### To Use This Integration:
+1. Ensure all Docker services are running (`docker-compose up -d`)
+2. Flash ESP32 with the updated code (`boot.py`, `main.py`, `config.py`)
+3. Power on ESP32 - it will connect to WiFi and MQTT broker
+4. Wait for Home Assistant to auto-discover entities (check Home Assistant UI → Devices & Services)
+5. Access your frontend UI, authenticate with Home Assistant token
+6. Control entities through the UI - commands will flow to ESP32 via the path described above
