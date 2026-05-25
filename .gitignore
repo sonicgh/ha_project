@@ -263,3 +263,5 @@ logs/
 # # Home Assistant large files
 # homeassistant_config/media/
 # homeassistant_config/backups/
+
+config.py
