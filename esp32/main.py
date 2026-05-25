@@ -7,14 +7,15 @@ from umqtt.simple import MQTTClient
 from machine import Pin, PWM
 
 # ========== CONFIGURATION ==========
-WIFI_SSID = "Your_WiFi_SSID"
-WIFI_PASSWORD = "Your_WiFi_Password"
+import config
+WIFI_SSID = config.WIFI_SSID
+WIFI_PASSWORD = config.WIFI_PASSWORD
 
 # MQTT Configuration
-MQTT_BROKER = "192.168.1.100"  # Your MQTT broker IP (Home Assistant)
-MQTT_PORT = 1883
-MQTT_USER = ""  # Leave empty if no auth needed
-MQTT_PASSWORD = ""
+MQTT_BROKER = config.MQTT_BROKER
+MQTT_PORT = config.MQTT_PORT
+MQTT_USER = config.MQTT_USER
+MQTT_PASSWORD = config.MQTT_PASSWORD
 
 # Device Configuration
 DEVICE_ID = "esp32_device_" + ubinascii.hexlify(machine.unique_id()).decode()

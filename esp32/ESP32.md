@@ -45,11 +45,21 @@ Flash MicroPython to your ESP32 (if not already done)
 
 Upload the script using ampy, rshell, or Thonny IDE
 
-Edit configuration (WiFi credentials, MQTT broker IP)
+Configuration Options:
+Option 1: Edit credentials directly in main.py (lines 10-17)
+Option 2: Use separate config.py file (recommended for easier updates)
+   - Update config.py with your WiFi and MQTT settings
+   - main.py will automatically read from config.py
 
 Upload umqtt.simple library to the device
 
-Run the script - it will auto-start on boot
+Run the script - it will auto-start on boot via boot.py
+
+Connection Information:
+- Access ESP32 via Thonny IDE: Select the correct COM/serial port
+- Typical ports: COM3, COM4 (Windows) or /dev/ttyUSB0, /dev/ttyACM0 (Linux/Mac)
+- Baud rate: 115200 (standard for MicroPython)
+- Once connected, you can use Thonny's interface to upload files and monitor output
 
 
 # Boot Automation
