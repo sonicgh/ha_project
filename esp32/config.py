@@ -1,0 +1,7 @@
+# config.py
+WIFI_SSID = "Your_WiFi_SSID"
+WIFI_PASSWORD = "Your_WiFi_Password"
+MQTT_BROKER = "192.168.1.100"
+MQTT_PORT = 1883
+MQTT_USER = ""
+MQTT_PASSWORD = ""
