@@ -50,6 +50,7 @@ chmod +x backup_ha.sh restart_ha.sh monitor_ha_logs.sh
 
 ```
 docker-compose up -d
+python3 -m http.server 3000 -d frontend
 ```
 
 ```
@@ -122,7 +123,7 @@ Here is the flow to make a device visible in the dashboard:
 Connect your device (e.g., an LED, relay, or sensor) to the ESP32's GPIO pins.
 
 ### 2. ESP32 Firmware (MQTT)
-The ESP32 needs code to control the device and talk to Home Assistant via the Mosquitto broker. You can use ESPHome, Tasmota, or Arduino code.
+The ESP32 needs code to control the device and talk to Home Assistant via the Mosquitto broker. You can use ESPHome, Tasmota, or Arduino code. In this project ESP32 has a micropython firmware
 - **Example (Arduino/MQTT)**: The ESP32 subscribes to a topic like `home/light/bedroom/set` and publishes its state to `home/light/bedroom/state`.
 
 ### 3. Entity Creation in Home Assistant
