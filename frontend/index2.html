@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Smart Control System | Apartment Dashboard</title>
+  <!-- Tailwind CSS + Font Awesome + Google Fonts for minimalistic style -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- HTMX & Alpine.js -->
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- Font Awesome 6 (free icons) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    /* custom smooth transitions + night-friendly colors (soft grey/beige tones) */
+    body {
+      background-color: #f7f6f2;  /* warm off-white, minimal glare */
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    }
+    /* simulate Inter font if not loaded */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap');
+    
+    /* card / square device style */
+    .device-card {
+      background: #ffffffdd;
+      backdrop-filter: blur(2px);
+      background: rgba(255,255,245,0.9);
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05);
+      border: 1px solid #e9e5da;
+    }
+    .device-card:hover {
+      transform: translateY(-2px);
+      border-color: #d4cfc2;
+      box-shadow: 0 12px 20px -12px rgba(0,0,0,0.1);
+    }
+    /* switch styles (soft toggle) */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc2b3;
+      transition: 0.2s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #7c9e7a;
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+    /* log container scroll minimal */
+    .log-area {
+      background: #fefcf7;
+      border: 1px solid #e6e2d6;
+    }
+    button, .action-btn {
+      transition: all 0.15s;
+    }
+    /* modal overlay */
+    .modal-overlay {
+      background-color: rgba(0,0,0,0.3);
+      backdrop-filter: blur(3px);
+    }
+    /* custom scroll */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #eae6dd;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #bcb3a2;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body class="p-5 md:p-6 max-w-7xl mx-auto" x-data="appDashboard()" x-init="init()" x-cloak>
+
+  <!-- AUTH SCREEN -->
+  <div x-show="!authenticated" class="fixed inset-0 flex items-center justify-center z-50 p-4" style="background: #f7f6f2;">
+    <div class="bg-white/95 backdrop-blur-sm rounded-2xl max-w-md w-full shadow-xl border border-stone-200 z-10 p-8">
+      <div class="text-center mb-6">
+        <h1 class="text-xl md:text-2xl font-light tracking-wide text-stone-700 mb-2">SMART CONTROL SYSTEM</h1>
+        <p class="text-xs text-stone-400 mb-6">apartment intelligence</p>
+        <p class="text-stone-600 text-sm">Enter your Home Assistant Long-Lived Access Token to continue.</p>
+      </div>
+      <input 
+        type="password" 
+        x-model="token" 
+        placeholder="Long-Lived Access Token..."
+        class="w-full border border-stone-300 rounded-xl p-3 bg-white/80 focus:outline-none focus:ring-2 focus:ring-stone-400 mb-3"
+        @keyup.enter="authenticate()"
+      >
+      <button 
+        @click="authenticate()" 
+        class="w-full bg-stone-700 text-white py-3 rounded-xl hover:bg-stone-800 transition flex items-center justify-center gap-2"
+      >
+        <i class="fas fa-plug"></i> Connect
+      </button>
+      <p x-show="authError" class="text-red-500 mt-3 text-xs text-center" x-text="authError"></p>
+    </div>
+  </div>
+
+  <!-- MAIN DASHBOARD (visible after authentication) -->
+  <div x-show="authenticated">
+
+    <!-- HEADER SECTION -->
+    <header class="flex flex-wrap items-center justify-between mb-8 gap-4">
+      <!-- left side: add device button + date + connection status -->
+      <div class="flex flex-wrap items-center gap-4">
+        <button @click="openModal = true" class="bg-white/70 hover:bg-white border border-stone-300 text-stone-700 px-5 py-2 rounded-full shadow-sm flex items-center gap-2 text-sm font-medium transition">
+          <i class="fas fa-plus-circle text-stone-500"></i> New Device
+        </button>
+        <div class="text-stone-500 text-sm bg-white/50 px-4 py-2 rounded-full flex items-center gap-2">
+          <i class="far fa-calendar-alt"></i> 
+          <span x-text="currentDate"></span>
+        </div>
+        <div class="flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-sm">
+          <span :class="{'text-green-600': isConnected, 'text-amber-600': !isConnected}">
+            <i :class="isConnected ? 'fas fa-plug' : 'fas fa-plug-circle-exclamation'"></i>
+          </span>
+          <span class="text-stone-600" x-text="isConnected ? 'System Online' : 'Connecting...'"></span>
+        </div>
+      </div>
+      <!-- right side: Smart Control System title + disconnect -->
+      <div class="text-right flex items-center gap-3">
+        <div>
+          <h1 class="text-xl md:text-2xl font-light tracking-wide text-stone-700">SMART CONTROL SYSTEM</h1>
+          <p class="text-xs text-stone-400">apartment intelligence</p>
+        </div>
+        <button @click="disconnect()" class="text-stone-400 hover:text-red-500 transition text-sm p-2" title="Disconnect">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- DEVICES SECTION (grid of squares) -->
+    <section class="mb-10">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-md font-medium text-stone-500 uppercase tracking-wider"><i class="fas fa-microchip mr-2"></i> Devices</h2>
+        <span class="text-xs text-stone-400" x-text="devices.length + ' device(s) registered'"></span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        <template x-for="(device, idx) in devices" :key="device.id">
+          <div class="device-card rounded-2xl p-4 flex flex-col justify-between relative">
+            <!-- delete icon top right -->
+            <button @click="deleteDevice(device.id)" class="absolute top-2 right-2 text-stone-400 hover:text-red-500 transition text-sm bg-white/70 rounded-full w-7 h-7 flex items-center justify-center">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+            <!-- icon + name + location -->
+            <div class="flex flex-col items-center text-center mt-1">
+              <i class="text-3xl mb-2" :class="device.type === 'lights' ? 'fas fa-lightbulb' : (device.type === 'sensor' ? 'fas fa-temperature-high' : 'fas fa-bullhorn')" :style="device.type === 'lights' && device.state === 'on' ? 'color:#f5b042' : 'color:#928c7a'"></i>
+              <span class="font-semibold text-stone-800 text-lg" x-text="device.name"></span>
+              <span class="text-xs text-stone-500 flex items-center gap-1"><i class="fas fa-map-pin"></i> <span x-text="device.location"></span></span>
+              <span class="text-[11px] mt-1 px-2 py-0.5 rounded-full" :class="device.online ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-stone-500'" x-text="device.online ? 'online' : 'offline'"></span>
+            </div>
+            <!-- dynamic content based on device type -->
+            <div class="mt-4 pt-3 border-t border-stone-200/80">
+              <!-- LIGHTS type: switch to enable/disable -->
+              <template x-if="device.type === 'lights'">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-stone-600">Power</span>
+                  <label class="toggle-switch">
+                    <input type="checkbox" :checked="device.state === 'on'" @change="toggleLight(device, $event.target.checked)">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </template>
+              <!-- SENSOR type: area to see value -->
+              <template x-if="device.type === 'sensor'">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-stone-600">Value</span>
+                  <div class="bg-stone-100 px-3 py-1 rounded-full text-sm font-mono" x-text="device.sensorValue !== undefined ? device.sensorValue : '--'"></div>
+                </div>
+              </template>
+              <!-- ACTIONABLE type: button to action -->
+              <template x-if="device.type === 'actionable'">
+                <button @click="triggerActionable(device)" class="w-full bg-stone-100 hover:bg-stone-200 text-stone-700 py-2 rounded-xl text-sm transition flex items-center justify-center gap-2">
+                  <i class="fas fa-play"></i> Execute
+                </button>
+              </template>
+            </div>
+            <!-- small meta: last seen or extra -->
+            <div class="text-[10px] text-stone-400 text-center mt-2" x-text="device.lastSeen ? 'last: ' + device.lastSeen : ''"></div>
+          </div>
+        </template>
+        <!-- empty state -->
+        <div x-show="devices.length === 0" class="col-span-full text-center py-12 bg-white/30 rounded-2xl border border-dashed border-stone-300 text-stone-400">
+          <i class="fas fa-couch text-3xl mb-2 block"></i>
+          <p>No devices yet. Click "New Device" to add lights, sensors or actionable.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOG SECTION -->
+    <section>
+      <div class="flex items-center gap-2 mb-3">
+        <i class="fas fa-history text-stone-500"></i>
+        <h2 class="text-md font-medium text-stone-500 uppercase tracking-wider">System Logs</h2>
+        <button @click="clearLogs" class="ml-auto text-xs text-stone-400 hover:text-stone-600 underline">clear</button>
+      </div>
+      <div class="log-area rounded-xl p-3 h-48 overflow-y-auto font-mono text-xs border shadow-inner">
+        <template x-for="log in logs.slice().reverse()" :key="log.id">
+          <div class="py-1 border-b border-stone-100 flex gap-2">
+            <span class="text-stone-400 w-20" x-text="log.time"></span>
+            <span class="text-stone-600" x-text="log.message"></span>
+          </div>
+        </template>
+        <div x-show="logs.length === 0" class="text-stone-400 text-center py-5">— no events logged —</div>
+      </div>
+    </section>
+
+    <!-- MODAL for adding new device (Alpine controlled) -->
+    <div x-show="openModal" x-cloak class="fixed inset-0 flex items-center justify-center z-50 p-4" style="display: none;">
+      <div class="absolute inset-0 modal-overlay" @click="openModal = false"></div>
+      <div class="bg-white/95 backdrop-blur-sm rounded-2xl max-w-md w-full shadow-xl border border-stone-200 z-10 p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-light text-stone-700">➕ Add HA Device</h3>
+          <button @click="openModal = false" class="text-stone-400 hover:text-stone-600"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm text-stone-600 mb-1">Entity ID *</label>
+            <input type="text" x-model="newEntityId" placeholder="e.g., light.living_room" class="w-full border border-stone-300 rounded-xl p-3 bg-white/80 focus:outline-none focus:ring-2 focus:ring-stone-400" @keyup.enter="addDevice">
+            <p class="text-xs text-stone-400 mt-1">Enter entity ID (light.*, sensor.*, switch.*, etc.)</p>
+          </div>
+          <div class="flex gap-2 justify-end pt-2">
+            <button @click="openModal = false" class="px-4 py-2 rounded-full border border-stone-300 text-stone-600">Cancel</button>
+            <button @click="addDevice" class="px-5 py-2 rounded-full bg-stone-700 text-white hover:bg-stone-800">Add Device</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function appDashboard() {
+      return {
+        // Auth
+        token: localStorage.getItem('ha_token') || '',
+        authenticated: false,
+        authError: '',
+
+        // Connection
+        isConnected: false,
+        wsConnected: false,
+        ws: null,
+
+        // Devices
+        devices: [],
+        newEntityId: '',
+
+        // Logs
+        logs: [],
+
+        // UI
+        openModal: false,
+        currentDate: '',
+
+        init() {
+          if (this.token) {
+            this.authenticate();
+          } else {
+            this.updateDate();
+            setInterval(() => this.updateDate(), 1000 * 60);
+          }
+        },
+
+        updateDate() {
+          const now = new Date();
+          this.currentDate = now.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) + ' · ' + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        },
+
+        addLog(message) {
+          const time = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+          this.logs.unshift({ id: Date.now() + Math.random(), time, message });
+          if (this.logs.length > 100) this.logs.pop();
+        },
+
+        clearLogs() {
+          this.logs = [];
+          this.addLog("Logs cleared by user");
+        },
+
+        async authenticate() {
+          if (!this.token) {
+            this.authError = 'Please enter a token';
+            return;
+          }
+          try {
+            const response = await fetch('http://localhost:8123/api/', {
+              headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            if (response.ok) {
+              this.authenticated = true;
+              this.authError = '';
+              this.isConnected = true;
+              localStorage.setItem('ha_token', this.token);
+              this.updateDate();
+              setInterval(() => this.updateDate(), 1000 * 60);
+              this.loadFromStorage();
+              this.connectWebSocket();
+              await this.fetchAllDevices();
+              this.addLog('🟢 Connected to Home Assistant • System ready');
+            } else {
+              this.authError = 'Invalid token. Please check and try again.';
+            }
+          } catch (error) {
+            this.authError = 'Connection failed. Is Home Assistant running?';
+          }
+        },
+
+        disconnect() {
+          this.authenticated = false;
+          this.token = '';
+          localStorage.removeItem('ha_token');
+          if (this.ws) {
+            this.ws.close();
+            this.ws = null;
+          }
+          this.wsConnected = false;
+          this.isConnected = false;
+          this.devices = [];
+          this.logs = [];
+          localStorage.removeItem('ha_dashboard_devices');
+        },
+
+        connectWebSocket() {
+          this.ws = new WebSocket('ws://localhost:8123/api/websocket');
+
+          this.ws.onopen = () => {
+            this.ws.send(JSON.stringify({
+              type: 'auth',
+              access_token: this.token
+            }));
+          };
+
+          this.ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+
+            if (message.type === 'auth_ok') {
+              this.wsConnected = true;
+              this.isConnected = true;
+              this.ws.send(JSON.stringify({
+                id: 1,
+                type: 'subscribe_events',
+                event_type: 'state_changed'
+              }));
+              this.addLog('🟢 WebSocket connected • Live updates active');
+            }
+
+            if (message.type === 'auth_invalid') {
+              this.addLog('⚠️ WebSocket auth failed');
+            }
+
+            if (message.event && message.event.data) {
+              const entity_id = message.event.data.entity_id;
+              const new_state = message.event.data.new_state;
+              const idx = this.devices.findIndex(d => d.id === entity_id);
+              if (idx !== -1) {
+                this.devices[idx] = this.mapToDevice(new_state);
+                this.persistDevices();
+              }
+            }
+          };
+
+          this.ws.onclose = () => {
+            this.wsConnected = false;
+            this.isConnected = false;
+            setTimeout(() => {
+              if (this.authenticated) this.connectWebSocket();
+            }, 3000);
+          };
+
+          this.ws.onerror = () => {
+            this.isConnected = false;
+          };
+        },
+
+        getDeviceType(entityId) {
+          const domain = entityId.split('.')[0];
+          if (['light'].includes(domain)) return 'lights';
+          if (['sensor', 'binary_sensor'].includes(domain)) return 'sensor';
+          return 'actionable';
+        },
+
+        parseSensorValue(val) {
+          const num = Number(val);
+          return isNaN(num) ? val : num;
+        },
+
+        mapToDevice(state) {
+          const type = this.getDeviceType(state.entity_id);
+          return {
+            id: state.entity_id,
+            name: state.attributes.friendly_name || state.entity_id,
+            location: state.attributes.area_id || state.entity_id.split('.')[0],
+            type: type,
+            state: state.state,
+            online: true,
+            lastSeen: new Date(state.last_changed).toLocaleTimeString(),
+            sensorValue: type === 'sensor' ? this.parseSensorValue(state.state) : undefined
+          };
+        },
+
+        loadFromStorage() {
+          const stored = localStorage.getItem('ha_dashboard_devices');
+          if (stored) {
+            try {
+              this.devices = JSON.parse(stored);
+            } catch (e) {
+              this.devices = [];
+            }
+          } else {
+            this.devices = [];
+          }
+        },
+
+        persistDevices() {
+          localStorage.setItem('ha_dashboard_devices', JSON.stringify(this.devices));
+        },
+
+        async fetchAllDevices() {
+          try {
+            const response = await fetch('http://localhost:8123/api/states', {
+              headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+            if (response.ok) {
+              const states = await response.json();
+              this.devices = this.devices.map(device => {
+                const haState = states.find(s => s.entity_id === device.id);
+                return haState ? this.mapToDevice(haState) : device;
+              });
+              this.persistDevices();
+            }
+          } catch (error) {
+            console.error('Failed to fetch states:', error);
+          }
+        },
+
+        async addDevice() {
+          if (!this.newEntityId) return;
+          try {
+            const response = await fetch(`http://localhost:8123/api/states/${this.newEntityId}`, {
+              headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+            if (response.ok) {
+              const state = await response.json();
+              if (!this.devices.find(d => d.id === state.entity_id)) {
+                const device = this.mapToDevice(state);
+                this.devices.push(device);
+                this.persistDevices();
+                this.addLog(`➕ Added device: "${device.name}" (${state.entity_id})`);
+              }
+              this.newEntityId = '';
+              this.openModal = false;
+            } else {
+              this.addLog(`⚠️ Device not found: ${this.newEntityId}`);
+            }
+          } catch (error) {
+            this.addLog(`⚠️ Failed to add device`);
+          }
+        },
+
+        deleteDevice(deviceId) {
+          const idx = this.devices.findIndex(d => d.id === deviceId);
+          if (idx !== -1) {
+            const devName = this.devices[idx].name;
+            this.devices.splice(idx, 1);
+            this.persistDevices();
+            this.addLog(`🗑️ Removed device: "${devName}"`);
+          }
+        },
+
+        async toggleLight(device, newCheckedState) {
+          const domain = device.id.split('.')[0];
+          const action = newCheckedState ? 'turn_on' : 'turn_off';
+          const prevState = device.state;
+          device.state = newCheckedState ? 'on' : 'off';
+          try {
+            const response = await fetch(`http://localhost:8123/api/services/${domain}/${action}`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ entity_id: device.id })
+            });
+            if (response.ok) {
+              device.lastSeen = new Date().toLocaleTimeString();
+              this.persistDevices();
+              this.addLog(`💡 ${device.name} turned ${action === 'turn_on' ? 'ON' : 'OFF'}`);
+            } else {
+              device.state = prevState;
+              this.addLog(`⚠️ Failed to toggle ${device.name}`);
+            }
+          } catch (error) {
+            device.state = prevState;
+            this.addLog(`⚠️ Error toggling ${device.name}`);
+          }
+        },
+
+        async triggerActionable(device) {
+          const domain = device.id.split('.')[0];
+          try {
+            const response = await fetch(`http://localhost:8123/api/services/${domain}/turn_on`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ entity_id: device.id })
+            });
+            if (response.ok) {
+              device.lastSeen = new Date().toLocaleTimeString();
+              this.persistDevices();
+              this.addLog(`⚙️ Triggered: "${device.name}"`);
+            } else {
+              this.addLog(`⚠️ Failed to trigger ${device.name}`);
+            }
+          } catch (error) {
+            this.addLog(`⚠️ Error triggering ${device.name}`);
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    [x-cloak] { display: none !important; }
+    body {
+      transition: background 0.2s;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background-color: #f3f1ea; }
+      .device-card { background: #fefcf5; }
+    }
+    .toggle-switch .slider {
+      background-color: #dad3c4;
+    }
+  </style>
+</body>
+</html>
