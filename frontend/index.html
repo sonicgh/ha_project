@@ -1,518 +1,472 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Apartment Dashboard</title>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Smart Control System | Apartment Dashboard</title>
+  <!-- Tailwind CSS + Font Awesome + Google Fonts for minimalistic style -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- HTMX & Alpine.js -->
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- Font Awesome 6 (free icons) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-100 min-h-screen" x-data="dashboard()" x-init="init()" x-cloak>
-    <!-- Auth Screen -->
-    <div x-show="!authenticated" class="flex items-center justify-center min-h-screen">
-        <div class="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-            <h1 class="text-2xl font-bold mb-4">Smart Apartment Dashboard</h1>
-            <p class="text-gray-600 mb-6">Enter your Home Assistant Long-Lived Access Token to continue.</p>
-            <input 
-                type="password" 
-                x-model="token" 
-                placeholder="Enter access token..." 
-                class="w-full p-3 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                @keyup.enter="authenticate()"
-            >
-            <button 
-                @click="authenticate()" 
-                class="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700 transition"
-            >
-                Connect
+<body class="p-5 md:p-6 max-w-7xl mx-auto" x-data="appDashboard()" x-init="init()" x-cloak>
+
+  <!-- AUTH SCREEN -->
+  <div x-show="!authenticated" class="fixed inset-0 flex items-center justify-center z-50 p-4" style="background: #f7f6f2;">
+    <div class="bg-white/95 backdrop-blur-sm rounded-2xl max-w-md w-full shadow-xl border border-stone-200 z-10 p-8">
+      <div class="text-center mb-6">
+        <h1 class="text-xl md:text-2xl font-light tracking-wide text-stone-700 mb-2">SMART CONTROL SYSTEM</h1>
+        <p class="text-xs text-stone-400 mb-6">apartment intelligence</p>
+        <p class="text-stone-600 text-sm">Enter your Home Assistant Long-Lived Access Token to continue.</p>
+      </div>
+      <input 
+        type="password" 
+        x-model="token" 
+        placeholder="Long-Lived Access Token..."
+        class="w-full border border-stone-300 rounded-xl p-3 bg-white/80 focus:outline-none focus:ring-2 focus:ring-stone-400 mb-3"
+        @keyup.enter="authenticate()"
+      >
+      <button 
+        @click="authenticate()" 
+        class="w-full bg-stone-700 text-white py-3 rounded-xl hover:bg-stone-800 transition flex items-center justify-center gap-2"
+      >
+        <i class="fas fa-plug"></i> Connect
+      </button>
+      <p x-show="authError" class="text-red-500 mt-3 text-xs text-center" x-text="authError"></p>
+    </div>
+  </div>
+
+  <!-- MAIN DASHBOARD (visible after authentication) -->
+  <div x-show="authenticated">
+
+    <!-- HEADER SECTION -->
+    <header class="flex flex-wrap items-center justify-between mb-8 gap-4">
+      <!-- left side: add device button + date + connection status -->
+      <div class="flex flex-wrap items-center gap-4">
+        <button @click="openModal = true" class="bg-white/70 hover:bg-white border border-stone-300 text-stone-700 px-5 py-2 rounded-full shadow-sm flex items-center gap-2 text-sm font-medium transition">
+          <i class="fas fa-plus-circle text-stone-500"></i> New Device
+        </button>
+        <div class="text-stone-500 text-sm bg-white/50 px-4 py-2 rounded-full flex items-center gap-2">
+          <i class="far fa-calendar-alt"></i> 
+          <span x-text="currentDate"></span>
+        </div>
+        <div class="flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 text-sm">
+          <span :class="{'text-green-600': isConnected, 'text-amber-600': !isConnected}">
+            <i :class="isConnected ? 'fas fa-plug' : 'fas fa-plug-circle-exclamation'"></i>
+          </span>
+          <span class="text-stone-600" x-text="isConnected ? 'System Online' : 'Connecting...'"></span>
+        </div>
+      </div>
+      <!-- right side: Smart Control System title + disconnect -->
+      <div class="text-right flex items-center gap-3">
+        <div>
+          <h1 class="text-xl md:text-2xl font-light tracking-wide text-stone-700">SMART CONTROL SYSTEM</h1>
+          <p class="text-xs text-stone-400">apartment intelligence</p>
+        </div>
+        <button @click="disconnect()" class="text-stone-400 hover:text-red-500 transition text-sm p-2" title="Disconnect">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- DEVICES SECTION (grid of squares) -->
+    <section class="mb-10">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-md font-medium text-stone-500 uppercase tracking-wider"><i class="fas fa-microchip mr-2"></i> Devices</h2>
+        <span class="text-xs text-stone-400" x-text="devices.length + ' device(s) registered'"></span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        <template x-for="(device, idx) in devices" :key="device.id">
+          <div class="device-card rounded-2xl p-4 flex flex-col justify-between relative">
+            <!-- delete icon top right -->
+            <button @click="deleteDevice(device.id)" class="absolute top-2 right-2 text-stone-400 hover:text-red-500 transition text-sm bg-white/70 rounded-full w-7 h-7 flex items-center justify-center">
+              <i class="fas fa-trash-alt"></i>
             </button>
-            <p x-show="authError" class="text-red-500 mt-2 text-sm" x-text="authError"></p>
+            <!-- icon + name + location -->
+            <div class="flex flex-col items-center text-center mt-1">
+              <i class="text-3xl mb-2" :class="device.type === 'lights' ? 'fas fa-lightbulb' : (device.type === 'sensor' ? 'fas fa-temperature-high' : 'fas fa-bullhorn')" :style="device.type === 'lights' && device.state === 'on' ? 'color:#f5b042' : 'color:#928c7a'"></i>
+              <span class="font-semibold text-stone-800 text-lg" x-text="device.name"></span>
+              <span class="text-xs text-stone-500 flex items-center gap-1"><i class="fas fa-map-pin"></i> <span x-text="device.location"></span></span>
+              <span class="text-[11px] mt-1 px-2 py-0.5 rounded-full" :class="device.online ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-stone-500'" x-text="device.online ? 'online' : 'offline'"></span>
+            </div>
+            <!-- dynamic content based on device type -->
+            <div class="mt-4 pt-3 border-t border-stone-200/80">
+              <!-- LIGHTS type: switch to enable/disable -->
+              <template x-if="device.type === 'lights'">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-stone-600">Power</span>
+                  <label class="toggle-switch">
+                    <input type="checkbox" :checked="device.state === 'on'" @change="toggleLight(device, $event.target.checked)">
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </template>
+              <!-- SENSOR type: area to see value -->
+              <template x-if="device.type === 'sensor'">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-stone-600">Value</span>
+                  <div class="bg-stone-100 px-3 py-1 rounded-full text-sm font-mono" x-text="device.sensorValue !== undefined ? device.sensorValue : '--'"></div>
+                </div>
+              </template>
+              <!-- ACTIONABLE type: button to action -->
+              <template x-if="device.type === 'actionable'">
+                <button @click="triggerActionable(device)" class="w-full bg-stone-100 hover:bg-stone-200 text-stone-700 py-2 rounded-xl text-sm transition flex items-center justify-center gap-2">
+                  <i class="fas fa-play"></i> Execute
+                </button>
+              </template>
+            </div>
+            <!-- small meta: last seen or extra -->
+            <div class="text-[10px] text-stone-400 text-center mt-2" x-text="device.lastSeen ? 'last: ' + device.lastSeen : ''"></div>
+          </div>
+        </template>
+        <!-- empty state -->
+        <div x-show="devices.length === 0" class="col-span-full text-center py-12 bg-white/30 rounded-2xl border border-dashed border-stone-300 text-stone-400">
+          <i class="fas fa-couch text-3xl mb-2 block"></i>
+          <p>No devices yet. Click "New Device" to add lights, sensors or actionable.</p>
         </div>
+      </div>
+    </section>
+
+    <!-- LOG SECTION -->
+    <section>
+      <div class="flex items-center gap-2 mb-3">
+        <i class="fas fa-history text-stone-500"></i>
+        <h2 class="text-md font-medium text-stone-500 uppercase tracking-wider">Session Logs</h2>
+        <button @click="clearLogs" class="ml-auto text-xs text-stone-400 hover:text-stone-600 underline">clear</button>
+      </div>
+      <div class="log-area rounded-xl p-3 h-48 overflow-y-auto font-mono text-xs border shadow-inner">
+        <template x-for="log in logs.slice().reverse()" :key="log.id">
+          <div class="py-1 border-b border-stone-100 flex gap-2">
+            <span class="text-stone-400 w-20" x-text="log.time"></span>
+            <span class="text-stone-600" x-text="log.message"></span>
+          </div>
+        </template>
+        <div x-show="logs.length === 0" class="text-stone-400 text-center py-5">— no events logged —</div>
+      </div>
+    </section>
+
+    <!-- MODAL for adding new device (Alpine controlled) -->
+    <div x-show="openModal" x-cloak class="fixed inset-0 flex items-center justify-center z-50 p-4" style="display: none;">
+      <div class="absolute inset-0 modal-overlay" @click="openModal = false"></div>
+      <div class="bg-white/95 backdrop-blur-sm rounded-2xl max-w-md w-full shadow-xl border border-stone-200 z-10 p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-light text-stone-700">➕ Add HA Device</h3>
+          <button @click="openModal = false" class="text-stone-400 hover:text-stone-600"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm text-stone-600 mb-1">Entity ID *</label>
+            <input type="text" x-model="newEntityId" placeholder="e.g., light.living_room" class="w-full border border-stone-300 rounded-xl p-3 bg-white/80 focus:outline-none focus:ring-2 focus:ring-stone-400" @keyup.enter="addDevice">
+            <p class="text-xs text-stone-400 mt-1">Enter entity ID (light.*, sensor.*, switch.*, etc.)</p>
+          </div>
+          <div class="flex gap-2 justify-end pt-2">
+            <button @click="openModal = false" class="px-4 py-2 rounded-full border border-stone-300 text-stone-600">Cancel</button>
+            <button @click="addDevice" class="px-5 py-2 rounded-full bg-stone-700 text-white hover:bg-stone-800">Add Device</button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Main Dashboard -->
-    <div x-show="authenticated" class="container mx-auto p-6">
-        <!-- Header -->
-        <div class="bg-white rounded-lg shadow p-6 mb-6">
-            <div class="flex justify-between items-center">
-                <h1 class="text-3xl font-bold text-gray-800">Smart Apartment Dashboard</h1>
-                <div class="flex items-center gap-4">
-                    <span class="text-sm" :class="wsConnected ? 'text-green-600' : 'text-red-600'">
-                        <span x-show="wsConnected">● Live</span>
-                        <span x-show="!wsConnected">● Disconnected</span>
-                    </span>
-                    <button @click="disconnect()" class="text-sm text-gray-500 hover:text-red-600">Disconnect</button>
-                </div>
-            </div>
-        </div>
+  </div>
 
-        <!-- Tabs -->
-        <div class="bg-white rounded-lg shadow mb-6">
-            <div class="flex border-b">
-                <button 
-                    @click="activeTab = 'devices'" 
-                    :class="{'tab-active': activeTab === 'devices'}"
-                    class="px-6 py-3 font-medium hover:text-blue-600 transition"
-                >
-                    Devices
-                </button>
-                <button 
-                    @click="activeTab = 'history'" 
-                    :class="{'tab-active': activeTab === 'history'}"
-                    class="px-6 py-3 font-medium hover:text-blue-600 transition"
-                >
-                    Device History
-                </button>
-                <button 
-                    @click="activeTab = 'logs'" 
-                    :class="{'tab-active': activeTab === 'logs'}"
-                    class="px-6 py-3 font-medium hover:text-blue-600 transition"
-                >
-                    Database Logs
-                </button>
-            </div>
-        </div>
+  <script>
+    function appDashboard() {
+      return {
+        // Auth
+        token: localStorage.getItem('ha_token') || '',
+        authenticated: false,
+        authError: '',
 
-        <!-- Devices Tab -->
-        <div x-show="activeTab === 'devices'" class="space-y-6">
-            <!-- Add Device -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-xl font-semibold mb-4">Add Device</h2>
-                <div class="flex gap-4">
-                    <input 
-                        type="text" 
-                        x-model="newEntityId" 
-                        placeholder="e.g., light.living_room" 
-                        class="flex-1 p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                    <button 
-                        @click="addDevice()" 
-                        class="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700 transition"
-                    >
-                        Add
-                    </button>
-                </div>
-                <p class="text-sm text-gray-500 mt-2">Enter entity ID (light.*, switch.*, sensor.*, binary_sensor.*)</p>
-            </div>
+        // Connection
+        isConnected: false,
+        wsConnected: false,
+        ws: null,
 
-            <!-- Device List -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <template x-for="device in devices" :key="device.entity_id">
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 class="font-semibold text-lg" x-text="device.attributes?.friendly_name || device.entity_id"></h3>
-                                <p class="text-sm text-gray-500" x-text="device.entity_id"></p>
-                            </div>
-                            <button @click="removeDevice(device.entity_id)" class="text-red-500 hover:text-red-700">✕</button>
-                        </div>
-                        
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-2xl font-bold" :class="device.state === 'on' ? 'text-green-600' : 'text-gray-400'" x-text="device.state"></span>
-                            <span class="text-xs px-2 py-1 rounded bg-gray-200" x-text="device.entity_id.split('.')[0]"></span>
-                        </div>
+        // Devices
+        devices: [],
+        newEntityId: '',
 
-                        <!-- Controls -->
-                        <div class="space-y-2">
-                            <template x-if="['light', 'switch'].includes(device.entity_id.split('.')[0])">
-                                <div class="flex gap-2">
-                                    <button 
-                                        @click="toggleDevice(device.entity_id)" 
-                                        class="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
-                                    >
-                                        Toggle
-                                    </button>
-                                    <button 
-                                        @click="controlDevice(device.entity_id, 'turn_on')" 
-                                        class="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700 transition"
-                                    >
-                                        On
-                                    </button>
-                                    <button 
-                                        @click="controlDevice(device.entity_id, 'turn_off')" 
-                                        class="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700 transition"
-                                    >
-                                        Off
-                                    </button>
-                                </div>
-                            </template>
-                            
-                            <button 
-                                @click="viewHistory(device.entity_id)" 
-                                class="w-full bg-gray-200 text-gray-700 py-2 rounded hover:bg-gray-300 transition"
-                            >
-                                View History
-                            </button>
-                        </div>
-                    </div>
-                </template>
-            </div>
+        // Logs
+        logs: [],
 
-            <div x-show="devices.length === 0" class="text-center py-12 text-gray-500">
-                No devices added yet. Add a device above to get started.
-            </div>
-        </div>
+        // UI
+        openModal: false,
+        currentDate: '',
 
-        <!-- History Tab -->
-        <div x-show="activeTab === 'history'" class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl font-semibold mb-4">Device History</h2>
-            
-            <div class="flex gap-4 mb-6">
-                <input 
-                    type="text" 
-                    x-model="historyEntityId" 
-                    placeholder="Entity ID (e.g., light.living_room)" 
-                    class="flex-1 p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                <button 
-                    @click="fetchHistory()" 
-                    class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 transition"
-                >
-                    Fetch History
-                </button>
-            </div>
+        init() {
+          if (this.token) {
+            this.authenticate();
+          } else {
+            this.updateDate();
+            setInterval(() => this.updateDate(), 1000 * 60);
+          }
+        },
 
-            <div x-show="historyLoading" class="text-center py-8">
-                <p class="text-gray-500">Loading history...</p>
-            </div>
+        updateDate() {
+          const now = new Date();
+          this.currentDate = now.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) + ' · ' + now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        },
 
-            <div x-show="historyData.length > 0" class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-sm font-semibold">Time</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold">Entity</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold">State</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y">
-                        <template x-for="record in historyData" :key="record.last_changed">
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-3 text-sm" x-text="formatDate(record.last_changed)"></td>
-                                <td class="px-4 py-3 text-sm" x-text="record.entity_id"></td>
-                                <td class="px-4 py-3 text-sm font-medium" :class="record.state === 'on' ? 'text-green-600' : 'text-gray-600'" x-text="record.state"></td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
+        addLog(message) {
+          const time = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+          this.logs.unshift({ id: Date.now() + Math.random(), time, message });
+          if (this.logs.length > 100) this.logs.pop();
+        },
 
-            <div x-show="historyData.length === 0 && !historyLoading" class="text-center py-8 text-gray-500">
-                Enter an entity ID and click "Fetch History" to view device records.
-            </div>
-        </div>
+        clearLogs() {
+          this.logs = [];
+          this.addLog("Logs cleared by user");
+        },
 
-        <!-- Logs Tab -->
-        <div x-show="activeTab === 'logs'" class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl font-semibold mb-4">Database Logs</h2>
-            
-            <div class="flex gap-4 mb-6">
-                <select x-model="logType" class="p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="states">States Table</option>
-                    <option value="events">Events Table</option>
-                </select>
-                <input 
-                    type="number" 
-                    x-model="logLimit" 
-                    placeholder="Limit (e.g., 50)" 
-                    class="w-32 p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                <button 
-                    @click="fetchLogs()" 
-                    class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 transition"
-                >
-                    Fetch Logs
-                </button>
-            </div>
-
-            <div x-show="logsLoading" class="text-center py-8">
-                <p class="text-gray-500">Fetching logs from PostgreSQL...</p>
-            </div>
-
-            <div x-show="logsData.length > 0" class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <template x-for="col in logsColumns" :key="col">
-                                <th class="px-4 py-3 text-left text-sm font-semibold" x-text="col"></th>
-                            </template>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y">
-                        <template x-for="(row, idx) in logsData" :key="idx">
-                            <tr class="hover:bg-gray-50">
-                                <template x-for="col in logsColumns" :key="col">
-                                    <td class="px-4 py-3 text-sm" x-text="row[col]"></td>
-                                </template>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-
-            <div x-show="logsData.length === 0 && !logsLoading" class="text-center py-8 text-gray-500">
-                Select a table and click "Fetch Logs" to view database records.
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function dashboard() {
-            return {
-                token: localStorage.getItem('ha_token') || '',
-                authenticated: false,
-                authError: '',
-                wsConnected: false,
-                activeTab: 'devices',
-                
-                // Devices
-                devices: JSON.parse(localStorage.getItem('ha_devices') || '[]'),
-                newEntityId: '',
-                
-                // History
-                historyEntityId: '',
-                historyData: [],
-                historyLoading: false,
-                
-                // Logs
-                logType: 'states',
-                logLimit: 50,
-                logsData: [],
-                logsLoading: false,
-                logsColumns: [],
-                
-                // WebSocket
-                ws: null,
-                
-                init() {
-                    if (this.token) {
-                        this.authenticate();
-                    }
-                },
-                
-                async authenticate() {
-                    if (!this.token) {
-                        this.authError = 'Please enter a token';
-                        return;
-                    }
-                    
-                    try {
-                        const response = await fetch('http://localhost:8123/api/', {
-                            headers: {
-                                'Authorization': `Bearer ${this.token}`,
-                                'Content-Type': 'application/json'
-                            }
-                        });
-                        
-                        if (response.ok) {
-                            this.authenticated = true;
-                            this.authError = '';
-                            localStorage.setItem('ha_token', this.token);
-                            this.connectWebSocket();
-                            this.fetchAllStates();
-                        } else {
-                            this.authError = 'Invalid token. Please check and try again.';
-                        }
-                    } catch (error) {
-                        this.authError = 'Connection failed. Is Home Assistant running?';
-                    }
-                },
-                
-                disconnect() {
-                    this.authenticated = false;
-                    this.token = '';
-                    localStorage.removeItem('ha_token');
-                    if (this.ws) {
-                        this.ws.close();
-                    }
-                },
-                
-                connectWebSocket() {
-                    this.ws = new WebSocket('ws://localhost:8123/api/websocket');
-                    
-                    this.ws.onopen = () => {
-                        this.ws.send(JSON.stringify({
-                            type: 'auth',
-                            access_token: this.token
-                        }));
-                    };
-                    
-                    this.ws.onmessage = (event) => {
-                        const message = JSON.parse(event.data);
-                        
-                        if (message.type === 'auth_ok') {
-                            this.wsConnected = true;
-                            // Subscribe to state changes
-                            this.ws.send(JSON.stringify({
-                                id: 1,
-                                type: 'subscribe_events',
-                                event_type: 'state_changed'
-                            }));
-                        }
-                        
-                        if (message.event?.data) {
-                            const entity_id = message.event.data.entity_id;
-                            const new_state = message.event.data.new_state;
-                            
-                            // Update device in list if it exists
-                            const idx = this.devices.findIndex(d => d.entity_id === entity_id);
-                            if (idx !== -1) {
-                                this.devices[idx] = new_state;
-                                localStorage.setItem('ha_devices', JSON.stringify(this.devices));
-                            }
-                        }
-                    };
-                    
-                    this.ws.onclose = () => {
-                        this.wsConnected = false;
-                        // Reconnect after 3 seconds
-                        setTimeout(() => this.connectWebSocket(), 3000);
-                    };
-                },
-                
-                async fetchAllStates() {
-                    try {
-                        const response = await fetch('http://localhost:8123/api/states', {
-                            headers: {
-                                'Authorization': `Bearer ${this.token}`
-                            }
-                        });
-                        
-                        if (response.ok) {
-                            const states = await response.json();
-                            // Update existing devices with latest states
-                            this.devices = this.devices.map(device => {
-                                const updated = states.find(s => s.entity_id === device.entity_id);
-                                return updated || device;
-                            });
-                            localStorage.setItem('ha_devices', JSON.stringify(this.devices));
-                        }
-                    } catch (error) {
-                        console.error('Failed to fetch states:', error);
-                    }
-                },
-                
-                async addDevice() {
-                    if (!this.newEntityId) return;
-                    
-                    try {
-                        const response = await fetch(`http://localhost:8123/api/states/${this.newEntityId}`, {
-                            headers: {
-                                'Authorization': `Bearer ${this.token}`
-                            }
-                        });
-                        
-                        if (response.ok) {
-                            const device = await response.json();
-                            if (!this.devices.find(d => d.entity_id === device.entity_id)) {
-                                this.devices.push(device);
-                                localStorage.setItem('ha_devices', JSON.stringify(this.devices));
-                            }
-                            this.newEntityId = '';
-                        } else {
-                            alert('Device not found. Check the entity ID.');
-                        }
-                    } catch (error) {
-                        alert('Failed to add device.');
-                    }
-                },
-                
-                removeDevice(entityId) {
-                    this.devices = this.devices.filter(d => d.entity_id !== entityId);
-                    localStorage.setItem('ha_devices', JSON.stringify(this.devices));
-                },
-                
-                async toggleDevice(entityId) {
-                    await this.controlDevice(entityId, 'toggle');
-                },
-                
-                async controlDevice(entityId, action) {
-                    const domain = entityId.split('.')[0];
-                    
-                    try {
-                        const response = await fetch(`http://localhost:8123/api/services/${domain}/${action}`, {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${this.token}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                entity_id: entityId
-                            })
-                        });
-                        
-                        if (!response.ok) {
-                            alert('Failed to control device.');
-                        }
-                    } catch (error) {
-                        alert('Failed to control device.');
-                    }
-                },
-                
-                viewHistory(entityId) {
-                    this.historyEntityId = entityId;
-                    this.activeTab = 'history';
-                    this.fetchHistory();
-                },
-                
-                async fetchHistory() {
-                    if (!this.historyEntityId) return;
-                    
-                    this.historyLoading = true;
-                    
-                    try {
-                        const response = await fetch(`http://localhost:8123/api/history/period/${new Date().toISOString()}?filter_entity_id=${this.historyEntityId}&significant_changes_only=0`, {
-                            headers: {
-                                'Authorization': `Bearer ${this.token}`
-                            }
-                        });
-                        
-                        if (response.ok) {
-                            const data = await response.json();
-                            this.historyData = data.flat().sort((a, b) => new Date(b.last_changed) - new Date(a.last_changed));
-                        } else {
-                            alert('Failed to fetch history.');
-                        }
-                    } catch (error) {
-                        alert('Failed to fetch history.');
-                    } finally {
-                        this.historyLoading = false;
-                    }
-                },
-                
-                async fetchLogs() {
-                    this.logsLoading = true;
-                    
-                    try {
-                        // Query PostgreSQL via a simple endpoint or direct query
-                        // For now, we'll use HA's API to get recent states
-                        const response = await fetch(`http://localhost:8123/api/history/period/${new Date().toISOString()}?significant_changes_only=0&limit=${this.logLimit}`, {
-                            headers: {
-                                'Authorization': `Bearer ${this.token}`
-                            }
-                        });
-                        
-                        if (response.ok) {
-                            const data = await response.json();
-                            this.logsData = data.flat().sort((a, b) => new Date(b.last_changed) - new Date(a.last_changed));
-                            this.logsColumns = ['entity_id', 'state', 'last_changed'];
-                        } else {
-                            alert('Failed to fetch logs.');
-                        }
-                    } catch (error) {
-                        alert('Failed to fetch logs.');
-                    } finally {
-                        this.logsLoading = false;
-                    }
-                },
-                
-                formatDate(dateString) {
-                    return new Date(dateString).toLocaleString();
-                }
+        async authenticate() {
+          if (!this.token) {
+            this.authError = 'Please enter a token';
+            return;
+          }
+          try {
+            const response = await fetch('http://localhost:8123/api/', {
+              headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            if (response.ok) {
+              this.authenticated = true;
+              this.authError = '';
+              this.isConnected = true;
+              localStorage.setItem('ha_token', this.token);
+              this.updateDate();
+              setInterval(() => this.updateDate(), 1000 * 60);
+              this.loadFromStorage();
+              this.connectWebSocket();
+              await this.fetchAllDevices();
+              this.addLog('🟢 Connected to Home Assistant • System ready');
+            } else {
+              this.authError = 'Invalid token. Please check and try again.';
             }
+          } catch (error) {
+            this.authError = 'Connection failed. Is Home Assistant running?';
+          }
+        },
+
+        disconnect() {
+          this.authenticated = false;
+          this.token = '';
+          localStorage.removeItem('ha_token');
+          if (this.ws) {
+            this.ws.close();
+            this.ws = null;
+          }
+          this.wsConnected = false;
+          this.isConnected = false;
+          this.devices = [];
+          this.logs = [];
+          localStorage.removeItem('ha_dashboard_devices');
+        },
+
+        connectWebSocket() {
+          this.ws = new WebSocket('ws://localhost:8123/api/websocket');
+
+          this.ws.onopen = () => {
+            this.ws.send(JSON.stringify({
+              type: 'auth',
+              access_token: this.token
+            }));
+          };
+
+          this.ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+
+            if (message.type === 'auth_ok') {
+              this.wsConnected = true;
+              this.isConnected = true;
+              this.ws.send(JSON.stringify({
+                id: 1,
+                type: 'subscribe_events',
+                event_type: 'state_changed'
+              }));
+              this.addLog('🟢 WebSocket connected • Live updates active');
+            }
+
+            if (message.type === 'auth_invalid') {
+              this.addLog('⚠️ WebSocket auth failed');
+            }
+
+            if (message.event && message.event.data) {
+              const entity_id = message.event.data.entity_id;
+              const new_state = message.event.data.new_state;
+              const idx = this.devices.findIndex(d => d.id === entity_id);
+              if (idx !== -1) {
+                this.devices[idx] = this.mapToDevice(new_state);
+                this.persistDevices();
+              }
+            }
+          };
+
+          this.ws.onclose = () => {
+            this.wsConnected = false;
+            this.isConnected = false;
+            setTimeout(() => {
+              if (this.authenticated) this.connectWebSocket();
+            }, 3000);
+          };
+
+          this.ws.onerror = () => {
+            this.isConnected = false;
+          };
+        },
+
+        getDeviceType(entityId) {
+          const domain = entityId.split('.')[0];
+          if (['light'].includes(domain)) return 'lights';
+          if (['sensor', 'binary_sensor'].includes(domain)) return 'sensor';
+          return 'actionable';
+        },
+
+        parseSensorValue(val) {
+          const num = Number(val);
+          return isNaN(num) ? val : num;
+        },
+
+        mapToDevice(state) {
+          const type = this.getDeviceType(state.entity_id);
+          return {
+            id: state.entity_id,
+            name: state.attributes.friendly_name || state.entity_id,
+            location: state.attributes.area_id || state.entity_id.split('.')[0],
+            type: type,
+            state: state.state,
+            online: true,
+            lastSeen: new Date(state.last_changed).toLocaleTimeString(),
+            sensorValue: type === 'sensor' ? this.parseSensorValue(state.state) : undefined
+          };
+        },
+
+        loadFromStorage() {
+          const stored = localStorage.getItem('ha_dashboard_devices');
+          if (stored) {
+            try {
+              this.devices = JSON.parse(stored);
+            } catch (e) {
+              this.devices = [];
+            }
+          } else {
+            this.devices = [];
+          }
+        },
+
+        persistDevices() {
+          localStorage.setItem('ha_dashboard_devices', JSON.stringify(this.devices));
+        },
+
+        async fetchAllDevices() {
+          try {
+            const response = await fetch('http://localhost:8123/api/states', {
+              headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+            if (response.ok) {
+              const states = await response.json();
+              this.devices = this.devices.map(device => {
+                const haState = states.find(s => s.entity_id === device.id);
+                return haState ? this.mapToDevice(haState) : device;
+              });
+              this.persistDevices();
+            }
+          } catch (error) {
+            console.error('Failed to fetch states:', error);
+          }
+        },
+
+        async addDevice() {
+          if (!this.newEntityId) return;
+          try {
+            const response = await fetch(`http://localhost:8123/api/states/${this.newEntityId}`, {
+              headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+            if (response.ok) {
+              const state = await response.json();
+              if (!this.devices.find(d => d.id === state.entity_id)) {
+                const device = this.mapToDevice(state);
+                this.devices.push(device);
+                this.persistDevices();
+                this.addLog(`➕ Added device: "${device.name}" (${state.entity_id})`);
+              }
+              this.newEntityId = '';
+              this.openModal = false;
+            } else {
+              this.addLog(`⚠️ Device not found: ${this.newEntityId}`);
+            }
+          } catch (error) {
+            this.addLog(`⚠️ Failed to add device`);
+          }
+        },
+
+        deleteDevice(deviceId) {
+          const idx = this.devices.findIndex(d => d.id === deviceId);
+          if (idx !== -1) {
+            const devName = this.devices[idx].name;
+            this.devices.splice(idx, 1);
+            this.persistDevices();
+            this.addLog(`🗑️ Removed device: "${devName}"`);
+          }
+        },
+
+        async toggleLight(device, newCheckedState) {
+          const domain = device.id.split('.')[0];
+          const action = newCheckedState ? 'turn_on' : 'turn_off';
+          const prevState = device.state;
+          device.state = newCheckedState ? 'on' : 'off';
+          try {
+            const response = await fetch(`http://localhost:8123/api/services/${domain}/${action}`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ entity_id: device.id })
+            });
+            if (response.ok) {
+              device.lastSeen = new Date().toLocaleTimeString();
+              this.persistDevices();
+              this.addLog(`💡 ${device.name} turned ${action === 'turn_on' ? 'ON' : 'OFF'}`);
+            } else {
+              device.state = prevState;
+              this.addLog(`⚠️ Failed to toggle ${device.name}`);
+            }
+          } catch (error) {
+            device.state = prevState;
+            this.addLog(`⚠️ Error toggling ${device.name}`);
+          }
+        },
+
+        async triggerActionable(device) {
+          const domain = device.id.split('.')[0];
+          try {
+            const response = await fetch(`http://localhost:8123/api/services/${domain}/turn_on`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ entity_id: device.id })
+            });
+            if (response.ok) {
+              device.lastSeen = new Date().toLocaleTimeString();
+              this.persistDevices();
+              this.addLog(`⚙️ Triggered: "${device.name}"`);
+            } else {
+              this.addLog(`⚠️ Failed to trigger ${device.name}`);
+            }
+          } catch (error) {
+            this.addLog(`⚠️ Error triggering ${device.name}`);
+          }
         }
-    </script>
+      }
+    }
+  </script>
 </body>
 </html>
