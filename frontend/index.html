@@ -11,95 +11,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <!-- Font Awesome 6 (free icons) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <style>
-    /* custom smooth transitions + night-friendly colors (soft grey/beige tones) */
-    body {
-      background-color: #f7f6f2;  /* warm off-white, minimal glare */
-      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-    }
-    /* simulate Inter font if not loaded */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap');
-    
-    /* card / square device style */
-    .device-card {
-      background: #ffffffdd;
-      backdrop-filter: blur(2px);
-      background: rgba(255,255,245,0.9);
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05);
-      border: 1px solid #e9e5da;
-    }
-    .device-card:hover {
-      transform: translateY(-2px);
-      border-color: #d4cfc2;
-      box-shadow: 0 12px 20px -12px rgba(0,0,0,0.1);
-    }
-    /* switch styles (soft toggle) */
-    .toggle-switch {
-      position: relative;
-      display: inline-block;
-      width: 44px;
-      height: 24px;
-    }
-    .toggle-switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #ccc2b3;
-      transition: 0.2s;
-      border-radius: 34px;
-    }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: 0.2s;
-      border-radius: 50%;
-    }
-    input:checked + .slider {
-      background-color: #7c9e7a;
-    }
-    input:checked + .slider:before {
-      transform: translateX(20px);
-    }
-    /* log container scroll minimal */
-    .log-area {
-      background: #fefcf7;
-      border: 1px solid #e6e2d6;
-    }
-    button, .action-btn {
-      transition: all 0.15s;
-    }
-    /* modal overlay */
-    .modal-overlay {
-      background-color: rgba(0,0,0,0.3);
-      backdrop-filter: blur(3px);
-    }
-    /* custom scroll */
-    ::-webkit-scrollbar {
-      width: 5px;
-      height: 5px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #eae6dd;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #bcb3a2;
-      border-radius: 10px;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body class="p-5 md:p-6 max-w-7xl mx-auto" x-data="appDashboard()" x-init="init()" x-cloak>
 
@@ -556,18 +468,5 @@
       }
     }
   </script>
-  <style>
-    [x-cloak] { display: none !important; }
-    body {
-      transition: background 0.2s;
-    }
-    @media (prefers-color-scheme: dark) {
-      body { background-color: #f3f1ea; }
-      .device-card { background: #fefcf5; }
-    }
-    .toggle-switch .slider {
-      background-color: #dad3c4;
-    }
-  </style>
 </body>
 </html>
