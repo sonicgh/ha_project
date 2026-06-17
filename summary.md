@@ -199,3 +199,33 @@ ESP32 Module (on your network)
 4. Wait for Home Assistant to auto-discover entities (check Home Assistant UI → Devices & Services)
 5. Access your frontend UI, authenticate with Home Assistant token
 6. Control entities through the UI - commands will flow to ESP32 via the path described above
+
+---
+
+## Python API Scripts
+
+Scripts in `python_api_requests/` mirror the endpoints used by the UI. All read `HA_URL` and `HA_TOKEN` from `.env`.
+
+| Script | Endpoint | Command |
+|---|---|---|
+| `validate_token.py` | `GET /api/` | `python3 python_api_requests/validate_token.py` |
+| `get_states.py` | `GET /api/states` | `python3 python_api_requests/get_states.py` |
+| `get_entity_state.py` | `GET /api/states/{entity_id}` | `python3 python_api_requests/get_entity_state.py light.esp32_device_xxx_led1` |
+| `send_command.py` | `POST /api/services/{domain}/{action}` | `python3 python_api_requests/send_command.py light.esp32_device_xxx_led1 turn_on` |
+| `websocket_listen.py` | `WS /api/websocket` | `python3 python_api_requests/websocket_listen.py` |
+
+```bash
+pip install python-dotenv aiohttp  # aiohttp only needed for websocket_listen.py
+
+# Validate your HA token
+python3 python_api_requests/validate_token.py
+
+# List all entity states
+python3 python_api_requests/get_states.py
+
+# Turn a light on/off
+python3 python_api_requests/send_command.py light.esp32_device_xxx_led1 turn_on
+
+# Listen for real-time state changes
+python3 python_api_requests/websocket_listen.py
+```

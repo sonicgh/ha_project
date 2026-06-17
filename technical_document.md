@@ -917,7 +917,39 @@ Features:
 - Log file output to `./logs/ha_monitor.log`
 - Interactive menu with 5 options
 
-### 14.6 Planned Testing Commands (MQTT)
+### 14.6 Python API Scripts
+
+Python scripts in `python_api_requests/` mirror the endpoints consumed by the frontend. All load `HA_URL` and `HA_TOKEN` from `.env` (via `python-dotenv`) and use standard library `urllib.request` for REST calls.
+
+| Script | Endpoint | Command |
+|---|---|---|
+| `validate_token.py` | `GET /api/` | `python3 python_api_requests/validate_token.py` |
+| `get_states.py` | `GET /api/states` | `python3 python_api_requests/get_states.py` |
+| `get_entity_state.py` | `GET /api/states/{entity_id}` | `python3 python_api_requests/get_entity_state.py light.esp32_device_xxx_led1` |
+| `send_command.py` | `POST /api/services/{domain}/{action}` | `python3 python_api_requests/send_command.py light.esp32_device_xxx_led1 turn_on` |
+| `websocket_listen.py` | `WS /api/websocket` | `python3 python_api_requests/websocket_listen.py` |
+
+```bash
+# Extra dependency (stdlib for REST, aiohttp for WebSocket)
+pip install python-dotenv aiohttp
+
+# Validate token
+python3 python_api_requests/validate_token.py
+
+# Fetch all states
+python3 python_api_requests/get_states.py
+
+# Get single entity state
+python3 python_api_requests/get_entity_state.py light.esp32_device_a0b7652a758c_led1
+
+# Send a command
+python3 python_api_requests/send_command.py light.esp32_device_a0b7652a758c_led1 turn_on
+
+# Listen for real-time state changes
+python3 python_api_requests/websocket_listen.py
+```
+
+### 14.7 Planned Testing Commands (MQTT)
 
 ```bash
 mosquitto_pub -h localhost -t "homeassistant/light/esp32_device_xxx/led1/command" -m "ON"

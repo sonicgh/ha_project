@@ -36,25 +36,32 @@
 
 ```
 ha_project/
-├── docker-compose.yml               # Defines all 3 containers
-├── readme2.md                       # This file
+├── docker-compose.yml               # 3 containers: HA, PostgreSQL, Mosquitto
+├── .env                             # HA URL/Token, PG, MQTT env vars
+├── requirements.txt                 # Pins homeassistant==2025.1.4
+├── README.md                        # This file
 ├── frontend/
-│   ├── index.html                   # Single-page dashboard (Alpine.js/HTMX)
+│   ├── index.html                   # Alpine.js + HTMX + Tailwind dashboard
 │   └── style.css                    # Dashboard styles
-├── homeassistant_config/
-│   ├── configuration.yaml           # HA config (DB, CORS, recorder)
-│   ├── entrypoint.sh                # Installs psycopg2, starts HA
-│   └── ...                          # (gitignored: automations, scripts, etc.)
 ├── esp32/
-│   ├── main.py                      # ESP32 firmware (WiFi, MQTT, GPIO)
+│   ├── main.py                      # ESP32 firmware (WiFi, MQTT, GPIO, HA discovery)
 │   ├── config.py                    # WiFi/MQTT credentials
 │   ├── boot.py                      # Auto-runs main() on power-up
-│   └── ESP32.md                     # Pinout reference
+│   └── ESP32.md                     # Pinout reference, MQTT test commands
+├── homeassistant_config/
+│   ├── configuration.yaml           # CORS, recorder (PostgreSQL), esp_health
+│   ├── entrypoint.sh                # Installs psycopg2-binary, starts HA
+│   ├── custom_components/
+│   │   └── esp_health/              # ESP32 device health monitoring integration
+│   └── ...                          # (gitignored: .HA_VERSION, .storage/, etc.)
+├── python_api_requests/             # Python scripts for HA REST API calls
 ├── scripts/
-│   ├── service_restart.sh           # Restart HA container
-│   ├── ha_configuration_backup.sh   # Backup config + DB dump
-│   └── container_log_monitoring.sh  # Monitor HA logs
-└── documents/                       # System planning docs
+│   ├── service_restart.sh           # Restart HA container with health check
+│   ├── ha_configuration_backup.sh   # Backup HA config + DB dump to ./backups/
+│   └── container_log_monitoring.sh  # Monitor logs: check <lines>, follow, stats
+├── documents/                       # Planning docs (flowcharts, pseudocode, state tables)
+├── summary.md                       # Project summary
+└── technical_document.md            # Technical reference
 ```
 
 ---
@@ -510,9 +517,56 @@ Simply unplug the USB/power from the ESP32. It will reconnect automatically when
 | `esp32/boot.py` | Auto-runs `main()` on ESP32 power-up |
 | `frontend/index.html` | Single-page dashboard (Alpine.js + HTMX + Tailwind) |
 | `frontend/style.css` | Dashboard styles |
+| `python_api_requests/validate_token.py` | Validate token: `GET /api/` |
+| `python_api_requests/get_states.py` | Fetch all entity states: `GET /api/states` |
+| `python_api_requests/get_entity_state.py` | Fetch single entity state: `GET /api/states/{entity_id}` |
+| `python_api_requests/send_command.py` | Send command: `POST /api/services/{domain}/{action}` |
+| `python_api_requests/websocket_listen.py` | Real-time events: `WS /api/websocket` |
 | `scripts/service_restart.sh` | Restarts HA container with health check |
 | `scripts/ha_configuration_backup.sh` | Backs up config + PostgreSQL dump |
 | `scripts/container_log_monitoring.sh` | Monitor HA container logs |
+
+---
+
+## 14. Python API Scripts
+
+Python scripts in `python_api_requests/` mirror the endpoints used by the frontend. All load `HA_URL` and `HA_TOKEN` from `.env` automatically (via `python-dotenv`) and use standard library `urllib.request` for REST calls.
+
+### Usage
+
+| Script | Endpoint | Command |
+|---|---|---|
+| `validate_token.py` | `GET /api/` | `python3 python_api_requests/validate_token.py` |
+| `get_states.py` | `GET /api/states` | `python3 python_api_requests/get_states.py` |
+| `get_entity_state.py` | `GET /api/states/{entity_id}` | `python3 python_api_requests/get_entity_state.py light.esp32_device_xxx_led1` |
+| `send_command.py` | `POST /api/services/{domain}/{action}` | `python3 python_api_requests/send_command.py light.esp32_device_xxx_led1 turn_on` |
+| `websocket_listen.py` | `WS /api/websocket` | `python3 python_api_requests/websocket_listen.py` |
+
+### Requirements
+
+```bash
+pip install python-dotenv aiohttp  # aiohttp only needed for websocket_listen.py
+```
+
+### Examples
+
+```bash
+# Validate your HA token
+python3 python_api_requests/validate_token.py
+
+# List all entities and their states
+python3 python_api_requests/get_states.py
+
+# Get a specific entity's state
+python3 python_api_requests/get_entity_state.py light.esp32_device_a0b7652a758c_led1
+
+# Turn a light on/off
+python3 python_api_requests/send_command.py light.esp32_device_a0b7652a758c_led1 turn_on
+python3 python_api_requests/send_command.py light.esp32_device_a0b7652a758c_led1 turn_off
+
+# Listen for real-time state changes
+python3 python_api_requests/websocket_listen.py
+```
 
 ---
 
