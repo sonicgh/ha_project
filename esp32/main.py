@@ -23,6 +23,7 @@ DEVICE_NAME = "esp32_controller"
 
 # Topic Structure
 TOPIC_STATUS = f"homeassistant/sensor/{DEVICE_ID}/status"
+TOPIC_TELEMETRY = f"homeassistant/sensor/{DEVICE_ID}/telemetry"
 TOPIC_LED1 = f"homeassistant/light/{DEVICE_ID}/led1/command"
 TOPIC_LED2 = f"homeassistant/light/{DEVICE_ID}/led2/command"
 TOPIC_LED3 = f"homeassistant/light/{DEVICE_ID}/led3/command"
@@ -66,7 +67,10 @@ def set_servo_angle(angle):
     print(f"Servo set to {angle}° (duty: {int(duty)})")
 
 # ========== WIFI CONNECTION ==========
+wlan = None
+
 def connect_wifi():
+    global wlan
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     if not wlan.isconnected():
@@ -257,6 +261,7 @@ def main():
     print("\nWaiting for commands...\n")
    
     # Main loop
+    start_time = time.time()
     last_ping = time.time()
     while True:
         try:
@@ -266,6 +271,11 @@ def main():
             # Send keep-alive every 30 seconds
             if time.time() - last_ping > 30:
                 mqtt.publish(TOPIC_STATUS, "online", retain=True)
+                telemetry = ujson.dumps({
+                    "rssi": wlan.status("rssi"),
+                    "uptime": int(time.time() - start_time),
+                })
+                mqtt.publish(TOPIC_TELEMETRY, telemetry, retain=False)
                 last_ping = time.time()
                 status_led.value(not status_led.value())  # Blink status LED
                 print("Heartbeat sent")

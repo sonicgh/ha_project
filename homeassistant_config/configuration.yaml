@@ -20,6 +20,14 @@ recorder:
       - sun.sun
       - zone.home
 
+# ESP32 Device Health Monitoring
+esp_health:
+  broker: ha-mosquitto
+  port: 1883
+  devices:
+    - name: "ESP32 Controller"
+      device_id: "esp32_device_a0b7652a758c"
+
 # Enable the history and logbook integration
 history:
 
