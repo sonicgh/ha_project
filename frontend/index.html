@@ -154,7 +154,12 @@
       <div class="absolute inset-0 modal-overlay" @click="openModal = false"></div>
       <div class="bg-white/95 backdrop-blur-sm rounded-2xl max-w-md w-full shadow-xl border border-stone-200 z-10 p-6">
         <div class="flex justify-between items-center mb-4">
-          <h3 class="text-xl font-light text-stone-700">➕ Add HA Device</h3>
+          <div class="flex items-center gap-3">
+            <h3 class="text-xl font-light text-stone-700">➕ Add HA Device</h3>
+            <button @click="fetchEsp32Entities()" class="text-xs bg-stone-100 hover:bg-stone-200 text-stone-600 px-3 py-1.5 rounded-full border border-stone-300 transition flex items-center gap-1">
+              <i class="fas fa-list"></i> Get Entities ID's
+            </button>
+          </div>
           <button @click="openModal = false" class="text-stone-400 hover:text-stone-600"><i class="fas fa-times"></i></button>
         </div>
         <div class="space-y-4">
@@ -167,6 +172,39 @@
             <button @click="openModal = false" class="px-4 py-2 rounded-full border border-stone-300 text-stone-600">Cancel</button>
             <button @click="addDevice" class="px-5 py-2 rounded-full bg-stone-700 text-white hover:bg-stone-800">Add Device</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL for ESP32 entity IDs -->
+    <div x-show="showEntitiesModal" x-cloak class="fixed inset-0 flex items-center justify-center z-50 p-4" style="display: none;">
+      <div class="absolute inset-0 modal-overlay" @click="showEntitiesModal = false"></div>
+      <div class="bg-white/95 backdrop-blur-sm rounded-2xl max-w-lg w-full shadow-xl border border-stone-200 z-10 p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-light text-stone-700"><i class="fas fa-microchip mr-2"></i> ESP32 Entities</h3>
+          <button @click="showEntitiesModal = false" class="text-stone-400 hover:text-stone-600"><i class="fas fa-times"></i></button>
+        </div>
+        <template x-if="esp32Loading">
+          <div class="text-center py-8 text-stone-500"><i class="fas fa-spinner fa-spin mr-2"></i> Loading...</div>
+        </template>
+        <template x-if="!esp32Loading && esp32Error">
+          <div class="text-center py-8 text-red-500 text-sm" x-text="esp32Error"></div>
+        </template>
+        <template x-if="!esp32Loading && !esp32Error">
+          <div>
+            <p class="text-sm text-stone-600 mb-3">
+              <span class="font-semibold" x-text="esp32Entities.length"></span> ESP32 entit<span x-text="esp32Entities.length === 1 ? 'y' : 'ies'"></span> found:
+            </p>
+            <div class="max-h-80 overflow-y-auto space-y-1 pr-1">
+              <template x-for="(entity, idx) in esp32Entities" :key="idx">
+                <div class="text-sm text-stone-700 bg-stone-50 rounded-lg px-3 py-2 font-mono" x-text="entity"></div>
+              </template>
+            </div>
+            <div x-show="esp32Entities.length === 0" class="text-center py-6 text-stone-400 text-sm">No ESP32 entities found.</div>
+          </div>
+        </template>
+        <div class="flex justify-end pt-4">
+          <button @click="showEntitiesModal = false" class="px-4 py-2 rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100">Close</button>
         </div>
       </div>
     </div>
@@ -195,6 +233,10 @@
 
         // UI
         openModal: false,
+        showEntitiesModal: false,
+        esp32Entities: [],
+        esp32Loading: false,
+        esp32Error: '',
         currentDate: '',
 
         init() {
@@ -463,6 +505,33 @@
             }
           } catch (error) {
             this.addLog(`⚠️ Error triggering ${device.name}`);
+          }
+        },
+
+        async fetchEsp32Entities() {
+          this.showEntitiesModal = true;
+          this.esp32Loading = true;
+          this.esp32Error = '';
+          this.esp32Entities = [];
+          try {
+            const response = await fetch('http://localhost:8123/api/states', {
+              headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+            if (!response.ok) {
+              this.esp32Error = `API error: ${response.status}`;
+              return;
+            }
+            const states = await response.json();
+            this.esp32Entities = states
+              .filter(s => s.entity_id.toLowerCase().includes('esp32'))
+              .map(s => s.entity_id)
+              .sort();
+            this.addLog(`📋 Fetched ${this.esp32Entities.length} ESP32 entities`);
+          } catch (error) {
+            this.esp32Error = 'Failed to fetch entities. Is HA running?';
+            this.addLog('⚠️ Failed to fetch ESP32 entities');
+          } finally {
+            this.esp32Loading = false;
           }
         }
       }
